@@ -90,8 +90,8 @@ before_script:
 - phpenv versions
 - php --version
 - php -m
-- convert -h
-- gs -h
+- convert --version
+- gs --version
 - npm --version
 - node --version
 - which phpunit
