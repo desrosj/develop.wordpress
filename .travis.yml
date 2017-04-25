@@ -37,6 +37,10 @@ before_install:
       svn checkout https://plugins.svn.wordpress.org/wordpress-importer/trunk tests/phpunit/data/plugins/wordpress-importer
   fi
 - |
+  if [[ ${TRAVIS_PHP_VERSION:0:3} != "5.2" && ${TRAVIS_PHP_VERSION:0:3} != "5.3" ]]; then
+    printf "\n" | pecl install imagick;
+  fi
+- |
   if [[ "$WP_TRAVIS_OBJECT_CACHE" == "true" ]]; then
     curl https://raw.githubusercontent.com/tollmanz/wordpress-pecl-memcached-object-cache/584392b56dc4adbe52bd2c7b86f875e23a3e5f75/object-cache.php > src/wp-content/object-cache.php
     echo "extension = memcached.so" >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
@@ -86,6 +90,8 @@ before_script:
 - phpenv versions
 - php --version
 - php -m
+- convert -h
+- gs -h
 - npm --version
 - node --version
 - which phpunit
