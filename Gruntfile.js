@@ -384,6 +384,7 @@ module.exports = function(grunt) {
 	grunt.registerTask('qunit:compiled', 'Runs QUnit tests on compiled as well as uncompiled scripts.',
 		['build', 'copy:qunit', 'qunit']);
 	grunt.registerTask('test', 'Runs all QUnit and PHPUnit tasks.', ['qunit:compiled', 'phpunit']);
+	grunt.registerTask('travis', ['jshint', 'test']);
 
 	// Default task.
 	grunt.registerTask('default', ['build']);
