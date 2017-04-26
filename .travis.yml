@@ -15,18 +15,14 @@ matrix:
     env: WP_TRAVISCI=travis:js
   - php: 7.1
   - php: 7.0
-  - php: 7.0
-    env: WP_TRAVIS_APCU_OBJECT_CACHE=true
-    services: apcu
   - php: 5.6
   - php: 5.6
-    env: WP_TRAVIS_OBJECT_CACHE=true
+    env: WP_TRAVIS_OBJECT_CACHE=memcached
     services: memcached
   - php: 5.5
   - php: 5.4
   - php: 5.4
-    env: WP_TRAVIS_APC_OBJECT_CACHE=true
-    services: apc
+    env: WP_TRAVIS_OBJECT_CACHE=apc
   - php: 5.3
   - php: 5.2
   - php: nightly
@@ -43,16 +39,12 @@ before_install:
       svn checkout https://plugins.svn.wordpress.org/wordpress-importer/trunk tests/phpunit/data/plugins/wordpress-importer
   fi
 - |
-  if [[ "$WP_TRAVIS_OBJECT_CACHE" == "true" ]]; then
+  if [[ "$WP_TRAVIS_OBJECT_CACHE" == "memcached" ]]; then
     curl https://raw.githubusercontent.com/tollmanz/wordpress-pecl-memcached-object-cache/584392b56dc4adbe52bd2c7b86f875e23a3e5f75/object-cache.php > src/wp-content/object-cache.php
     echo "extension = memcached.so" >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
   fi
 - |
-  if [[ "$WP_TRAVIS_APCU_OBJECT_CACHE" == "true" ]]; then
-    echo "extension = apcu.so" >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
-  fi
-- |
-  if [[ "$WP_TRAVIS_APC_OBJECT_CACHE" == "true" ]]; then
+  if [[ "$WP_TRAVIS_OBJECT_CACHE" == "apc" ]]; then
     echo "extension = apc.so" >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
   fi
 before_script:
