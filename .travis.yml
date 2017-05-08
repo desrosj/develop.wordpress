@@ -20,4 +20,4 @@ before_script:
     - npm install
     - php --version
 
-script: grunt test
+script: grunt travis

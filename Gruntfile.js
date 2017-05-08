@@ -1,10 +1,10 @@
-/*global module:false*/
+/* jshint node:true */
 module.exports = function(grunt) {
-	var path = require('path');
-	var SOURCE_DIR = 'src/';
-	var BUILD_DIR = 'build/';
+	var path = require('path'),
+		SOURCE_DIR = 'src/',
+		BUILD_DIR = 'build/';
 
-	// Load tasks. 
+	// Load tasks.
 	require('matchdep').filterDev('grunt-*').forEach( grunt.loadNpmTasks );
 
 	// Project configuration.
@@ -23,7 +23,8 @@ module.exports = function(grunt) {
 					BUILD_DIR + 'wp-includes/js/tinymce/wp-tinymce-schema.min.js',
 					BUILD_DIR + 'wp-includes/js/tinymce/mark_loaded.js'
 				]
-			}
+			},
+			qunit: ['tests/qunit/compiled.html']
 		},
 		copy: {
 			files: {
@@ -47,8 +48,8 @@ module.exports = function(grunt) {
 			},
 			version: {
 				options: {
-					processContent: function( src, filepath ) {
-						return src.replace( /^(\$wp_version.+?)-src';/m, "$1';" );
+					processContent: function( src ) {
+						return src.replace( /^(\$wp_version.+?)-src';/m, '$1\';' );
 					}
 				},
 				files: [
@@ -64,6 +65,27 @@ module.exports = function(grunt) {
 				cwd: SOURCE_DIR,
 				dest: BUILD_DIR,
 				src: []
+			},
+			qunit: {
+				src: 'tests/qunit/index.html',
+				dest: 'tests/qunit/compiled.html',
+				options: {
+					processContent: function( src ) {
+						return src.replace( /([^\.])*\.\.\/src/ig , '/../build' );
+					}
+				}
+			}
+		},
+		sass: {
+			colors: {
+				expand: true,
+				cwd: SOURCE_DIR,
+				dest: BUILD_DIR,
+				ext: '.css',
+				src: ['wp-admin/css/colors/*/colors.scss'],
+				options: {
+					outputStyle: 'expanded'
+				}
 			}
 		},
 		cssmin: {
@@ -76,12 +98,158 @@ module.exports = function(grunt) {
 					'wp-admin/css/*.css',
 					'wp-includes/css/*.css',
 					// Exceptions
+					'!wp-admin/css/theme.css', // Temporary file
 					'!wp-admin/css/farbtastic.css'
 				]
+			},
+			rtl: {
+				expand: true,
+				cwd: BUILD_DIR,
+				dest: BUILD_DIR,
+				ext: '.min.css',
+				src: [
+					'wp-admin/css/*-rtl.css',
+					'wp-includes/css/*-rtl.css'
+				]
+			},
+			colors: {
+				expand: true,
+				cwd: BUILD_DIR,
+				dest: BUILD_DIR,
+				ext: '.min.css',
+				src: [
+					'wp-admin/css/colors/*/*.css'
+				]
+			}
+		},
+		cssjanus: {
+			core: {
+				options: {
+					swapLtrRtlInUrl: false
+				},
+				expand: true,
+				cwd: SOURCE_DIR,
+				dest: BUILD_DIR,
+				ext: '-rtl.css',
+				src: [
+					'wp-admin/css/*.css',
+					'wp-includes/css/*.css'
+				]
+			},
+			colors: {
+				options: {
+					processContent: function( src ) {
+						return src.replace( /([^/]+)\.css/gi, '$1-rtl.css' );
+					}
+				},
+				expand: true,
+				cwd: BUILD_DIR,
+				dest: BUILD_DIR,
+				ext: '-rtl.css',
+				src: [
+					'wp-admin/css/colors/*/colors.css'
+				]
+			},
+			dynamic: {
+				expand: true,
+				cwd: SOURCE_DIR,
+				dest: BUILD_DIR,
+				ext: '-rtl.css',
+				src: []
+			}
+		},
+		jshint: {
+			options: grunt.file.readJSON('.jshintrc'),
+			grunt: {
+				src: ['Gruntfile.js']
+			},
+			tests: {
+				src: [
+					'tests/qunit/**/*.js',
+					'!tests/qunit/vendor/qunit.js'
+				],
+				options: grunt.file.readJSON('tests/qunit/.jshintrc')
+			},
+			themes: {
+				expand: true,
+				cwd: SOURCE_DIR + 'wp-content/themes',
+				src: [
+					'**/*.js',
+					'!twenty{eleven,twelve,thirteen}/**',
+					// Third party scripts
+					'!twentyfourteen/js/html5.js'
+				]
+			},
+			core: {
+				expand: true,
+				cwd: SOURCE_DIR,
+				src: [
+					'wp-admin/js/*.js',
+					'wp-includes/js/*.js',
+					// WordPress scripts inside directories
+					'wp-includes/js/jquery/jquery.table-hotkeys.js',
+					'wp-includes/js/mediaelement/wp-mediaelement.js',
+					'wp-includes/js/plupload/handlers.js',
+					'wp-includes/js/plupload/wp-plupload.js',
+					'wp-includes/js/tinymce/plugins/wordpress/editor_plugin_src.js',
+					'wp-includes/js/tinymce/plugins/wp*/editor_plugin_src.js',
+					'wp-includes/js/tinymce/mark_loaded_src.js',
+					// Third party scripts
+					'!wp-admin/js/farbtastic.js',
+					'!wp-admin/js/iris.min.js',
+					'!wp-includes/js/backbone.min.js',
+					'!wp-includes/js/swfobject.js',
+					'!wp-includes/js/underscore.min.js',
+					'!wp-includes/js/zxcvbn.min.js',
+					'!wp-includes/js/colorpicker.js',
+					'!wp-includes/js/hoverIntent.js',
+					'!wp-includes/js/json2.js',
+					'!wp-includes/js/tw-sack.js'
+				],
+				// Remove once other JSHint errors are resolved
+				options: {
+					curly: false,
+					eqeqeq: false
+				},
+				// Limit JSHint's run to a single specified file
+				//     grunt jshint:core --file=filename.js
+				filter: function( filepath ) {
+					var index, file = grunt.option( 'file' );
+
+					// Don't filter when no target file is specified
+					if ( ! file ) {
+						return true;
+					}
+
+					// Normalize filepath for Windows
+					filepath = filepath.replace( /\\/g, '/' );
+					index = filepath.lastIndexOf( '/' + file );
+
+					// Match only the filename passed from cli
+					if ( filepath === file || ( -1 !== index && index === filepath.length - ( file.length + 1 ) ) ) {
+						return true;
+					}
+
+					return false;
+				}
 			}
 		},
 		qunit: {
 			files: ['tests/qunit/**/*.html']
+		},
+		phpunit: {
+			'default': {
+				cmd: 'phpunit',
+				args: ['-c', 'phpunit.xml.dist']
+			},
+			ajax: {
+				cmd: 'phpunit',
+				args: ['-c', 'phpunit.xml.dist', '--group', 'ajax']
+			},
+			multisite: {
+				cmd: 'phpunit',
+				args: ['-c', 'tests/phpunit/multisite.xml']
+			}
 		},
 		uglify: {
 			core: {
@@ -167,6 +335,21 @@ module.exports = function(grunt) {
 					interval: 2000
 				}
 			},
+			colors: {
+				files: [SOURCE_DIR + 'wp-admin/css/colors/**'],
+				tasks: ['sass:colors']
+			},
+			rtl: {
+				files: [
+					SOURCE_DIR + 'wp-admin/css/*.css',
+					SOURCE_DIR + 'wp-includes/css/*.css'
+				],
+				tasks: ['cssjanus:dynamic'],
+				options: {
+					spawn: false,
+					interval: 2000
+				}
+			},
 			test: {
 				files: ['tests/qunit/**'],
 				tasks: ['qunit']
@@ -178,14 +361,31 @@ module.exports = function(grunt) {
 
 	// Copy task.
 	grunt.registerTask('copy:all', ['copy:files', 'copy:version']);
-	
+
+	// RTL task.
+	grunt.registerTask('rtl', ['cssjanus:core', 'cssjanus:colors']);
+
+	// Color schemes task.
+	grunt.registerTask('colors', ['sass:colors']);
+
 	// Build task.
-	grunt.registerTask('build', ['clean:all', 'copy:all', 'cssmin:core', 'uglify:core',
-		'uglify:tinymce', 'concat:tinymce', 'compress:tinymce', 'clean:tinymce']);
+	grunt.registerTask('build', ['clean:all', 'copy:all', 'cssmin:core', 'colors', 'rtl', 'cssmin:rtl', 'cssmin:colors',
+		'uglify:core', 'uglify:tinymce', 'concat:tinymce', 'compress:tinymce', 'clean:tinymce']);
 
-	// Testing task.
-	grunt.registerTask('test', ['qunit']);
+	// Testing tasks.
+	grunt.registerMultiTask('phpunit', 'Runs PHPUnit tests, including the ajax and multisite tests.', function() {
+		grunt.util.spawn({
+			cmd: this.data.cmd,
+			args: this.data.args,
+			opts: {stdio: 'inherit'}
+		}, this.async());
+	});
 
+	grunt.registerTask('qunit:compiled', 'Runs QUnit tests on compiled as well as uncompiled scripts.',
+		['build', 'copy:qunit', 'qunit']);
+	grunt.registerTask('test', 'Runs all QUnit and PHPUnit tasks.', ['qunit:compiled', 'phpunit']);
+	grunt.registerTask('travis', ['jshint', 'test']);
+	
 	// Default task.
 	grunt.registerTask('default', ['build']);
 
@@ -193,15 +393,18 @@ module.exports = function(grunt) {
 	//
 	// On `watch:all`, automatically updates the `copy:dynamic` and `clean:dynamic`
 	// configurations so that only the changed files are updated.
+	// On `watch:rtl`, automatically updates the `cssjanus:dynamic` configuration.
 	grunt.event.on('watch', function( action, filepath, target ) {
-		if ( target != 'all' )
+		if ( target !== 'all' && target !== 'rtl' ) {
 			return;
+		}
 
-		var relativePath = path.relative( SOURCE_DIR, filepath );
-		var cleanSrc = ( action == 'deleted' ) ? [relativePath] : [];
-		var copySrc = ( action == 'deleted' ) ? [] : [relativePath];
+		var relativePath = path.relative( SOURCE_DIR, filepath ),
+			cleanSrc = ( action === 'deleted' ) ? [relativePath] : [],
+			copySrc = ( action === 'deleted' ) ? [] : [relativePath];
 
 		grunt.config(['clean', 'dynamic', 'src'], cleanSrc);
 		grunt.config(['copy', 'dynamic', 'src'], copySrc);
+		grunt.config(['cssjanus', 'dynamic', 'src'], copySrc);
 	});
 };
